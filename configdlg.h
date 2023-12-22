@@ -3,8 +3,9 @@
 
 #include <QDialog>
 
-namespace Ui {
-    class ConfigDlg;
+namespace Ui
+{
+class ConfigDlg;
 }
 
 class ConfigDlg : public QDialog
@@ -27,14 +28,14 @@ private slots:
 
     void on_btnSelectQt_clicked();
 
-    void on_btnSelectComplier_clicked();
-
     void on_btnSave_clicked();
 
     void on_btnCancel_clicked();
+
+    void on_btnParsePath_clicked();
 
 private:
     Ui::ConfigDlg *ui;
 };
 
-#endif // CONFIGDLG_H
+#endif   // CONFIGDLG_H
