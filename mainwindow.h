@@ -5,6 +5,7 @@
 #include "configdlg.h"
 
 #include <QMainWindow>
+#include <QProcess>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -45,6 +46,7 @@ private:
     Ui::MainWindow *ui;
     ConfigDlg *     dlg;
 
-    QString programPath;
+    QString   programPath;
+    QProcess *process;
 };
 #endif   // MAINWINDOW_H

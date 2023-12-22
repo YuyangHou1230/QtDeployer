@@ -24,11 +24,14 @@ MainWindow::MainWindow(QWidget *parent)
     slotUpdateContent();
 
     connect(ui->labProgram, &DropLabel::fileSelected, this, &MainWindow::selectPrograme);
+
+    process = new QProcess();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete process;
 }
 
 void MainWindow::slotUpdateContent()
@@ -38,14 +41,17 @@ void MainWindow::slotUpdateContent()
 
     ui->frameTooltip->setVisible(!isInit);
     ui->frameContent->setEnabled(isInit);
-    if ( !isInit )
-    {
-        return;
-    }
 
     resize(0, 0);
     QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
     resize(0, 0);
+    int height = isInit ? 429 : 490;
+    setFixedSize(width(), height);
+
+    if ( !isInit )
+    {
+        return;
+    }
 
     // 更新当前Qt版本
     ui->editVersion->setText("Qt" + info.version);
@@ -118,23 +124,50 @@ void MainWindow::on_btnDeploy_clicked()
 {
     if ( programPath.isEmpty() )
     {
+        QMessageBox::warning(this, "提示", "请选择程序！");
         return;
     }
 
     // 根据所选编译器得到windeployqt.exe路径
-    QString   windeployPath = QString("%1/bin/windeployqt.exe").arg(Config::getInstance().getQtComplierName());
+    QString   windeployPath = QString("%1/bin/windeployqt.exe").arg(Config::getInstance().getInfo().defaltComplier.path);
     QFileInfo info(windeployPath);
     if ( info.exists() )
     {
-        int code = QProcess::execute(windeployPath, QStringList() << programPath);
-        if ( code < 0 )
-        {
-            QMessageBox::information(this, "提示", "打包失败！");
-        }
-        else
-        {
-            QMessageBox::information(this, "提示", "打包完成！");
-        }
+
+        process->setProgram(windeployPath);
+        process->setArguments(QStringList() << programPath);
+        connect(process, &QProcess::readyReadStandardOutput, this, [=]() {
+            qDebug() << "读取输出";
+            //            ui->textEdit->append(process->readAllStandardOutput());
+        });
+        connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [=](int code, QProcess::ExitStatus exitStatus) {
+            qDebug() << code << exitStatus;
+            qDebug() << "执行结束";
+            if ( code >= 0 && QProcess::ExitStatus::NormalExit == exitStatus )
+            {
+                //                QMessageBox::information(this, "提示", "打包完成！");
+            }
+            else
+            {
+                //                QMessageBox::information(this, "提示", "打包失败！");
+            }
+        });
+
+        process->start();   // 异步的方式调用
+
+        //        int code = QProcess::execute(windeployPath, QStringList() << programPath);
+        //        if ( code < 0 )
+        //        {
+        //            QMessageBox::information(this, "提示", "打包失败！");
+        //        }
+        //        else
+        //        {
+        //            QMessageBox::information(this, "提示", "打包完成！");
+        //        }
+    }
+    else
+    {
+        QMessageBox::warning(this, "提示", "编译器路径错误，打包失败！");
     }
 }
 
@@ -156,6 +189,11 @@ void MainWindow::on_btnConfig_clicked()
 void MainWindow::on_action_triggered()
 {
     // 自动检测SDK环境
+    QMessageBox::StandardButton btn = QMessageBox::question(this, "提示", "自动检测只适用于C盘Qt默认安装的情况，是否继续？");
+    if ( btn != QMessageBox::Yes )
+    {
+        return;
+    }
     bool ret = false;
 
     // 检测C盘是否有Qt目录
@@ -169,6 +207,7 @@ void MainWindow::on_action_triggered()
         {
             SdkInfo info;
             Config::checkDir(p.absoluteFilePath(), info);
+            ret = info.isvalid;
             if ( info.isvalid )
             {
                 // 提示是否使用
@@ -187,6 +226,11 @@ void MainWindow::on_action_triggered()
                 }
             }
         }
+    }
+
+    if ( !ret )
+    {
+        QMessageBox::warning(this, "提示", "自动检测失败！");
     }
 }
 
